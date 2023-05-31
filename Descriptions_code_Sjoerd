@@ -1,0 +1,46 @@
+import pandas as pd
+from rdkit import Chem
+from rdkit.Chem import Descriptors
+
+
+class Molecule:
+    def __init__(self, smiles, aldhi_inhibition):
+        self.smiles = smiles
+        self.aldhi_inhibition = aldhi_inhibition
+    
+    def compute_descriptors(self):
+        mol = Chem.MolFromSmiles(self.smiles)
+        descriptors = {
+            "MolecularWeight": Descriptors.MolWt(mol),
+            "LogP": Descriptors.MolLogP(mol),
+            "TPSA": Descriptors.TPSA(mol),
+            "NumHAcceptors": Descriptors.NumHAcceptors(mol),
+            "NumHDonors": Descriptors.NumHDonors(mol),
+            # Add more descriptors as needed
+        }
+        return descriptors
+
+def read_molecules_from_csv(csv_file):
+    data = pd.read_csv(csv_file)
+    molecules = []
+    for index, row in data.iterrows():
+        molecule = Molecule(row["SMILES"], row["ALDH1_inhibition"])
+        molecules.append(molecule)
+    return molecules
+
+def analyze_molecules(molecules):
+    for molecule in molecules:
+        print("SMILES:", molecule.smiles)
+        print("ALDH1 Inhibition:", molecule.aldhi_inhibition)
+        descriptors = molecule.compute_descriptors()
+        print("Molecular Weight:", descriptors["MolecularWeight"])
+        print("LogP:", descriptors["LogP"])
+        print("TPSA:", descriptors["TPSA"])
+        print("NumHAcceptors:", descriptors["NumHAcceptors"])
+        print("NumHDonors:", descriptors["NumHDonors"])
+        print()
+
+# Runnable code
+csv_file = "tested_molecules-1.csv"
+molecules = read_molecules_from_csv(csv_file)
+analyze_molecules(molecules)
