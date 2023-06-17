@@ -303,5 +303,5 @@ def thresholdedAccuracy(yTest, pred, pred_prob, threshold=0.8):
     da = np.amax(pred_prob, axis=1) > threshold
     threshAcc = accuracy_score(np.asarray(yTest)[da], pred[da])
     # calc coverage
-    sum(da) / len(da)
-    return da, threshAcc
+    coverage = sum(da) / len(da)
+    return da, threshAcc, coverage
