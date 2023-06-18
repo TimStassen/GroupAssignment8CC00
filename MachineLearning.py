@@ -97,7 +97,11 @@ def createDescriptorDf(filename='AllTestedMols.txt'):
     suppl = Chem.SmilesMolSupplier('AllTestedMols.txt')
     mols = [m for m in suppl]
     allDescrs = [getMolDescriptors(m) for m in mols]
-    return pd.DataFrame(allDescrs)
+    allDescrs = pd.DataFrame(allDescrs)
+    smiles = pd.read_csv(filename)
+    smiles = smiles['SMILES']
+    allDescrs.insert(loc=0,column='SMILES',value=smiles)
+    return allDescrs
 
 
 def generateMorganFingerprint(filename='AllTestedMols.txt'):
@@ -117,6 +121,9 @@ def generateMorganFingerprint(filename='AllTestedMols.txt'):
         DataStructs.ConvertToNumpyArray(f, arr)
         fingerprint.append(arr) 
         x = np.asarray(fingerprint)
+    
+    x = pd.DataFrame(x)
+
     return x 
 
 def convertToMol(filename='AllTestedMols.txt'):
@@ -134,7 +141,11 @@ def convertToMol(filename='AllTestedMols.txt'):
 def CombineDescriptorsAndFigerprints(Morganfingerprints, descriptors):
     """
     """
-    x = np.concatenate((Morganfingerprints, descriptors), axis=1)
+    smiles = descriptors["SMILES"]
+    descriptors = descriptors.drop(columns=["SMILES"])
+    x = np.concatenate((Morganfingerprints,descriptors), axis=1)
+    x = pd.DataFrame(x)
+    x.insert(loc=0,column='SMILES', value=smiles)
     return x, x.shape
 
 # preprocessing
@@ -142,6 +153,10 @@ def CombineDescriptorsAndFigerprints(Morganfingerprints, descriptors):
 def scaleData(data, scaletype='standardize'):
     """
     """
+    smiles = data['SMILES']
+    data = data.drop(columns=["SMILES"])
+    # data = data.to_numpy()
+    data.columns = data.columns.astype(str)
     if scaletype == 'standardize':
         scale = StandardScaler().fit(data)
         scaledData = scale.transform(data)    
@@ -150,6 +165,9 @@ def scaleData(data, scaletype='standardize'):
         scaledData = scale.transform(data)  
     else:
         raise ValueError("input should be 'standardize' or 'Normalize'")
+    scaledData = pd.DataFrame(scaledData)
+    scaledData.insert(loc=0,column='SMILES', value=smiles)
+
     return scaledData
 
 def PCAfeatureReduction(data, varianceThreshold):
@@ -160,8 +178,9 @@ def PCAfeatureReduction(data, varianceThreshold):
     else: 
         df = data
 
-    # df_std = StandardScaler().fit_transform(df)
-    # df_std =  pd.DataFrame(df_std)
+    smiles = df['SMILES']
+    df = df.drop(columns=["SMILES"])
+    df.columns = df.columns.astype(str)
 
     pca = PCA()
     principalComponents = pca.fit_transform(df)
@@ -175,7 +194,10 @@ def PCAfeatureReduction(data, varianceThreshold):
         sumVar = cumulative_variance_ratio[i]
         i +=1
 
-    return df.iloc[:,:i], principalDF
+    explainingVariables = df.iloc[:,:i]
+    explainingVariables.insert(loc=0,column='SMILES', value=smiles)
+
+    return explainingVariables, principalDF
 
 
 def getTargetData(AHDL1Inhibitors):
@@ -305,3 +327,29 @@ def thresholdedAccuracy(yTest, pred, pred_prob, threshold=0.8):
     # calc coverage
     coverage = sum(da) / len(da)
     return da, threshAcc, coverage
+
+def top100molecules(trainedModelFile):
+    """
+    """
+    molecules = importFiles(nrFiles=1)
+
+    writeNewMolfile(molecules, filename='untestedMolFile.txt')
+    allDescrs = createDescriptorDf(filename='untestedMolFile.txt')
+    x = generateMorganFingerprint()
+
+    x, _ = CombineDescriptorsAndFigerprints(x,allDescrs)
+
+    xScale = scaleData(x,scaletype='standardize')
+    smiles = xScale["SMILES"]
+    xScaleNoSMILES = xScale.drop(columns=["SMILES"])
+    trainedModel = joblib.load(f"{trainedModelFile}")
+    predProb = trainedModel.predict_proba(xScaleNoSMILES)
+    # pred_prob = trainedModel.predict_proba(untestedDataFile)
+    predProbDf = pd.DataFrame(predProb)
+    predProbDf.insert(loc=0, column='SMILES', value=smiles)
+    predProbDfSort = predProbDf.sort_values(by=1, ascending=False)
+    top100Mols = predProbDfSort.head(100)
+
+
+    return top100Mols
+
