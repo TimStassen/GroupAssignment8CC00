@@ -28,13 +28,15 @@ For the prediction phase, we utilize a dataset of molecules without known inhibi
 
 The main components of the repository are as follows:
 
-- `data/`: This folder contains the datasets used for training and prediction.
+- `Data/`: This folder contains the datasets used for training and prediction.
 
-- `notebooks/`: This folder contains Jupyter notebooks for data preprocessing, PCA, model training, prediction, and other analyses.
+- `Notebooks/`: This folder contains Jupyter notebooks for data preprocessing, PCA, model training, prediction, and other analyses.
 
 - `src/`: This folder contains Python scripts for various stages of the project.
 
 - `results/`: This folder holds the final results, including the list of top 100 predicted inhibitors.
+
+- `models/`: This folder contains the models that were trained using different types of data.
 
 - `requirements.txt`: This file lists the Python dependencies required for this project.
 
