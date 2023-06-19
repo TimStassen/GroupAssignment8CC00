@@ -49,7 +49,7 @@ The main components of the repository are as follows:
 - Tristan Muir
 - Tim Stassen
 - Sjoerd de Ruijter
-- 
+
 
 
 
