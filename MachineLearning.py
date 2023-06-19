@@ -414,7 +414,7 @@ def thresholdedAccuracy(yTest, pred, pred_prob, threshold=0.8):
     coverage = sum(threshPreds) / len(threshPreds)
     return threshPreds, threshAcc, coverage
 
-def top100molecules(trainedModelFile):
+def top100molecules(trainedModelFile, pcaValue):
     """ generate selection of most probable AHDL1 inhibitors
     Parameter(s):       trainedModelFile:   (str) filename of the trained model
     Returns:            top100Mols:         (pd.Dataframe) column of 100 SMILES
@@ -430,9 +430,10 @@ def top100molecules(trainedModelFile):
 
     xScale = scaleData(x,scaletype='standardize')
     smiles = xScale["SMILES"]
-    xScaleNoSMILES = xScale.drop(columns=["SMILES"])
+    xPrep, _ = PCAfeatureReduction(xScale, pcaValue)
+    xPrepNoSMILES = xPrep.drop(columns=["SMILES"])
     trainedModel = joblib.load(f"{trainedModelFile}")
-    predProb = trainedModel.predict_proba(xScaleNoSMILES)
+    predProb = trainedModel.predict_proba(xPrepNoSMILES)
     # pred_prob = trainedModel.predict_proba(untestedDataFile)
     predProbDf = pd.DataFrame(predProb)
     predProbDf.insert(loc=0, column='SMILES', value=smiles)
