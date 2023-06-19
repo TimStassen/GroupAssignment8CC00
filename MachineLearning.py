@@ -38,8 +38,8 @@ import joblib
 
 def importFiles(nrFiles=int, writetxt=True):
     """ Import .csv files by selection
-    Parameter(s):   nrFiles: (int) number of files to be selected
-    Returns:        allAHDL1InhibitorsDf (pd.DataFrame) dataframe containing all SMILES and inhibit info
+    Parameter(s):   nrFiles:                (int) number of files to be selected
+    Returns:        allAHDL1InhibitorsDf    (pd.DataFrame) dataframe containing all SMILES and inhibit info
         """
     allAHDL1Inhibitors = []
     for nr, _ in enumerate(range(nrFiles)):
@@ -60,8 +60,8 @@ def importFiles(nrFiles=int, writetxt=True):
 
 def writeNewMolfile(AHDL1InhibitorDf, filename='AllTestedMols.txt'):
     """ write SMILES in 'AHDL1InhibitorDf' dataframe to a .txt file
-    Parameter(s):       AHDL1InhibitorDf: dataframe containing SMILES and inhibit property
-                        fileName: (str) name for the file to be written
+    Parameter(s):       AHDL1InhibitorDf:   (pd.Dataframe) dataframe containing SMILES and inhibit property
+                        fileName:           (str) name for the file to be written
     Returns:            -
     """
     allTestedMolecules = AHDL1InhibitorDf[0] # first 3 for testing, needs to change for all molecules (remove[0:4])
@@ -113,15 +113,13 @@ def createDescriptorDf(filename='AllTestedMols.txt'):
 
 def generateMorganFingerprint(filename='AllTestedMols.txt'):
     """
-    Parameter(s):   filename: (str) file containing SMILES of different molecules
-
-    Returns:         x: (numpy.array) array containing fingerprint test/train dataset
+    Parameter(s):   filename:   (str) file containing SMILES of different molecules
+    Returns:        x:          (numpy.array) array containing fingerprint test/train dataset
     """
     RDLogger.DisableLog('rdApp.*')
     suppl = Chem.SmilesMolSupplier(filename)
     mols = [m for m in suppl]
     fingerp = [AllChem.GetMorganFingerprintAsBitVect(m, 2) for m in mols]
-
     fingerprint = []
     for f in fingerp:
         arr = np.zeros((1,))
@@ -136,7 +134,6 @@ def generateMorganFingerprint(filename='AllTestedMols.txt'):
 def convertToMol(filename='AllTestedMols.txt'):
     """ 
     Parameter(s):   filename: (str) file containing SMILES of different molecules
-
     Returns:        allDescr: (pd.DataFrame) dataFrame containing molecule-specific
                                 objects
     """
@@ -373,7 +370,7 @@ def testTrainedModel(xTest, yTest, model=None, savedModelfilename=str, scaledDat
                         scaledDatafile=None:      (str) filename/path for saved scaled feature dataset
     Returns:            pred                      (ndArray) array containing prediction of test set
                         balAcc                    (int) balanced accuracy metric on test set
-                        pred_prob                 ()
+                        pred_prob                 (ndArray)
     """
     if model == None:
         if savedModelfilename.find('.pkl') != -1:
@@ -400,19 +397,28 @@ def testTrainedModel(xTest, yTest, model=None, savedModelfilename=str, scaledDat
     return pred, balAcc, evaluationReport, confusionMatrix, predProb
 
 
-
 def thresholdedAccuracy(yTest, pred, pred_prob, threshold=0.8):
-    """
+    """ model's accuracy after certain prediction probability thershold
+    Parameter(s):       yTest:      (pd.dataFrame) ground truth labels
+                        pred:       (ndArray) predictions of the models
+                        pred_prob:  (ndArray) probability of made predictions of the model
+                        threshold:  (int) value of minimum certainty of predictions
+    Returns:            threshPreds:(ndArray) array containing samples passing the threshold         
+                        threshAcc:  (int) accuracy value of thresholded predictions
+                        coverage:   (int) number of samples/original amount
     """
     # calc maximum predicted probability for each row (compound) and compare to the threshold
-    da = np.amax(pred_prob, axis=1) > threshold
-    threshAcc = accuracy_score(np.asarray(yTest)[da], pred[da])
+    threshPreds = np.amax(pred_prob, axis=1) > threshold
+    threshAcc = accuracy_score(np.asarray(yTest)[threshPreds], pred[threshPreds])
     # calc coverage
-    coverage = sum(da) / len(da)
-    return da, threshAcc, coverage
+    coverage = sum(threshPreds) / len(threshPreds)
+    return threshPreds, threshAcc, coverage
 
 def top100molecules(trainedModelFile):
-    """
+    """ generate selection of most probable AHDL1 inhibitors
+    Parameter(s):       trainedModelFile:   (str) filename of the trained model
+    Returns:            top100Mols:         (pd.Dataframe) column of 100 SMILES
+                                                corresponding to the highest prediction probability
     """
     molecules = importFiles(nrFiles=1)
 
