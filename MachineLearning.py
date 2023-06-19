@@ -16,6 +16,9 @@ from rdkit.Chem import Draw, Descriptors, AllChem
 from rdkit.ML.Descriptors.MoleculeDescriptors import MolecularDescriptorCalculator
 IPythonConsole.ipython_useSVG=True
 
+# visualization
+import matplotlib.pyplot as plt
+
 # ML
 import numpy as np
 from sklearn import neighbors, metrics
@@ -73,7 +76,8 @@ def writeNewMolfile(AHDL1InhibitorDf, filename='AllTestedMols.txt'):
 def getMolDescriptors(mol, missingVal=None):
     """ Calculate the full list of descriptors for a molecule
     Parameter(s):   mol:  current molecule
-                    missingValue: (=None) is set to given value if descriptor cannot be calculated
+                    missingValue: (=None) is set to given value if descriptor 
+                                    cannot be calculated
     Returns:        res: (dict): a dictionary containing all descriptor data 
     """
     res = {}
@@ -91,7 +95,10 @@ def getMolDescriptors(mol, missingVal=None):
     return res
 
 def createDescriptorDf(filename='AllTestedMols.txt'):
-    """
+    """ create pd.Dataframe from text file
+    Parameter(s):   filename: (str) file containing SMILES
+    Returns:        allDescr: (pd.DataFrame) dataframe containing 
+                                molecular descriptors
     """
     RDLogger.DisableLog('rdApp.*')
     suppl = Chem.SmilesMolSupplier('AllTestedMols.txt')
@@ -108,7 +115,7 @@ def generateMorganFingerprint(filename='AllTestedMols.txt'):
     """
     Parameter(s):   filename: (str) file containing SMILES of different molecules
 
-    Return:         x: (numpy.array) array containing fingerprint test/train dataset
+    Returns:         x: (numpy.array) array containing fingerprint test/train dataset
     """
     RDLogger.DisableLog('rdApp.*')
     suppl = Chem.SmilesMolSupplier(filename)
@@ -128,9 +135,10 @@ def generateMorganFingerprint(filename='AllTestedMols.txt'):
 
 def convertToMol(filename='AllTestedMols.txt'):
     """ 
-    Parameter(s):
+    Parameter(s):   filename: (str) file containing SMILES of different molecules
 
-    Return:
+    Returns:        allDescr: (pd.DataFrame) dataFrame containing molecule-specific
+                                objects
     """
     suppl = Chem.SmilesMolSupplier(filename)
     mols = [m for m in suppl]
@@ -139,7 +147,13 @@ def convertToMol(filename='AllTestedMols.txt'):
     return pd.DataFrame(allDescrs)
 
 def CombineDescriptorsAndFigerprints(Morganfingerprints, descriptors):
-    """
+    """ Merge molecular properties inot one dataframe
+    Parameter(s):   Morganfingerprints: (pd.DataFrame) containing Morgan fingerprints
+                                            (ECFP4) properties
+                    descriptors:        (pd.DataFrame) containing molecular descriptors 
+                                            extracted from Rdkit package
+    Returns:        x:                  (pd.DataFrame) concatenated dataframe of the above
+                    x.shape:            (dim) the shape of concatenated dataframe
     """
     smiles = descriptors["SMILES"]
     descriptors = descriptors.drop(columns=["SMILES"])
@@ -151,7 +165,13 @@ def CombineDescriptorsAndFigerprints(Morganfingerprints, descriptors):
 # preprocessing
 
 def scaleData(data, scaletype='standardize'):
-    """
+    """ scale dataset into preferred manner
+    Parameter(s):   data:       (pd.Dataframe) dataframe containig all desired molecule
+                                    properties
+                    scaletype:  (str) 'normalize' or 'standardize' indicating the to be
+                                    performed scaling operation
+    Returns:        scaledData: (pd.Dataframe) dataframe containig all desired molecule
+                                    properties scaled
     """
     smiles = data['SMILES']
     data = data.drop(columns=["SMILES"])
@@ -171,7 +191,13 @@ def scaleData(data, scaletype='standardize'):
     return scaledData
 
 def PCAfeatureReduction(data, varianceThreshold):
-    """
+    """ reduce the number of features in the data set explaining (almost)
+        no variation
+    Parameter(s):   data:               (pd.DataFrame) data set with original nr of features
+                    varianceThreshold:  (int) ratio of variance explained by features after reduction
+    Return(s):      explainingVariables (pd.DataFrame) data set with nr of features,
+                                             explaining the amount of thresholded variance
+                    principalDF:        (pd.DataFrame) dataframe containing the principal components
     """
     if isinstance(data, np.ndarray):
         df = pd.DataFrame(data)
@@ -201,15 +227,30 @@ def PCAfeatureReduction(data, varianceThreshold):
 
 
 def getTargetData(AHDL1Inhibitors):
-    """
-    
+    """ extract labels from the dataset
+    Parameter(s):   AHDL1Inhibitors:    (pd.DataFrame) dataframe consisting of SMILES 
+                                            and inhibitor label
+    Returns:        y:                  (pd.DataFrame) dataframe consisting of inhibitor label
+                    imbalanceIndex:     (int) ratio of the amount of labels==1 compared to all
     """
     y = AHDL1Inhibitors[1][1:].astype(int)
     imbalanceIndex = sum(y)/len(y)
     return y, imbalanceIndex
 
 def splitTrainTestData(x,y, test_size=0.20, nSplits=5, seed=13, printSplit=False):
-    """
+    """ split train and test set in cross-validation
+    Parameter(s):   x:          (pd.DataFrame) feature data set (fingerprints & descriptors)
+                    y:          (pd.DataFrame) inhibitor lables (0 or 1)
+                    test_size:  (int) ratio of total data set assigned to test set (default = 0.20 )
+                    nSplits:    (int) number of cross- validation folds to be made (default = 5)
+                    seed:       (int) set seed for consistent splitting of data (default = 13)
+                    printSplit: (Boolean) print the folds for cross- validation (default - False)
+
+    Returns:        xTrain:     (pd.DataFrame) train part of x
+                    xTest:      (pd.DataFrame) test part of x
+                    yTrain:     (pd.DataFrame) corresponding labels for xTrain
+                    yTest:      (pd.DataFrame) corresponding labels for xTest
+                    cv:         (ndArray) The testing set indices for the number of splits.
     
     """
     xTrain, xTest, yTrain, yTest = train_test_split(x, y, test_size=test_size, random_state=seed)
@@ -225,7 +266,15 @@ def splitTrainTestData(x,y, test_size=0.20, nSplits=5, seed=13, printSplit=False
  # RF
 
 def trainRF(xTrain, yTrain, cv):
-    """
+    """ train random Forest Classifier
+    Parameter(s):   xTrain:                 (pd.DataFrame) feature data set for training
+                    yTrain:                 (pd.DataFrame) labels data set for training
+                    cv:                     (ndArray) The testing set indices for the number of splits.
+    Returns:        trainedRFC:             trained model
+                    RFgrid.best_params_:    best parameters found by grid search
+                    RFgrid:                 best parameter input for model training
+                    param_grid:             complet grid wherein to find optimum
+                    RFgrid.best_score_:     best score of all folds 
     """
     
     RFc = RandomForestClassifier()
@@ -249,7 +298,15 @@ def trainRF(xTrain, yTrain, cv):
 # SVM 
 
 def trainSVC(xTrain, yTrain, cv):
-    """
+    """ train Support Vector Machine Classifier
+    Parameter(s):   xTrain:                 (pd.DataFrame) feature data set for training
+                    yTrain:                 (pd.DataFrame) labels data set for training
+                    cv:                     (ndArray) The testing set indices for the number of splits.
+    Returns:        trainedSVC:             trained model
+                    SVCgrid.best_params_:   best parameters found by grid search
+                    SVCgrid:                best parameter input for model training
+                    param_grid:             complet grid wherein to find optimum
+                    SVCgrid.best_score_:    best score of all folds 
     """
     svc = SVC(kernel='rbf', probability=True)
     
@@ -269,7 +326,16 @@ def trainSVC(xTrain, yTrain, cv):
 
 # KNN
 def trainKnn(xTrain, yTrain, cv, k_range=list):
-    """
+    """ train k Nearest Neighbour Classifier
+    Parameter(s):   xTrain:                 (pd.DataFrame) feature data set for training
+                    yTrain:                 (pd.DataFrame) labels data set for training
+                    cv:                     (ndArray) The testing set indices for the number of splits.
+                    k_range:                (list) list of minumum to maximum number of neighbours to consider
+    Returns:        trainedknn:             trained model
+                    knngrid.best_params_:   best parameters found by grid search
+                    knngrid:                best parameter input for model training
+                    param_grid:             complete grid wherein to find optimum
+                    knngrid.best_score_:    best score of all folds 
     """
     knn = KNeighborsClassifier()
 
@@ -290,12 +356,24 @@ def trainKnn(xTrain, yTrain, cv, k_range=list):
 
 # saving and testing
 def saveTrainedModel(model, filename):
-    """
+    """ save trained model
+    Parameter(s):   model:      (obj) trained Machine learning model
+                    filename:   (str) name of the file where model is in saved
+    Returns:        -
     """
     joblib.dump(model, f"{filename}.pkl", compress=3)
 
 def testTrainedModel(xTest, yTest, model=None, savedModelfilename=str, scaledData=False, scaledDatafile=None):
-    """
+    """ Test trained machine learning model
+    Parameter(s):       xTest:                    (pd.DataFrame) feature data set for testing 
+                        yTest:                    (pd.DataFrame) labels data set for testing
+                        model=None:               (obj) machine learning model trained
+                        savedModelfilename:       (str) filename/path for trained machine learning model
+                        scaledData=False:         (Boolean) indicate if input data is scaled
+                        scaledDatafile=None:      (str) filename/path for saved scaled feature dataset
+    Returns:            pred                      (ndArray) array containing prediction of test set
+                        balAcc                    (int) balanced accuracy metric on test set
+                        pred_prob                 ()
     """
     if model == None:
         if savedModelfilename.find('.pkl') != -1:
@@ -315,8 +393,13 @@ def testTrainedModel(xTest, yTest, model=None, savedModelfilename=str, scaledDat
         pred = trainedModel.predict(xTest)
 
     balAcc = metrics.balanced_accuracy_score(yTest, pred)
-    pred_prob = trainedModel.predict_proba(xTest)
-    return pred, balAcc, pred_prob
+    evaluationReport = metrics.classification_report(yTest, pred)
+    confusionMatrix = metrics.confusion_matrix(yTest, pred)
+
+    predProb = trainedModel.predict_proba(xTest)
+    return pred, balAcc, evaluationReport, confusionMatrix, predProb
+
+
 
 def thresholdedAccuracy(yTest, pred, pred_prob, threshold=0.8):
     """
@@ -349,7 +432,5 @@ def top100molecules(trainedModelFile):
     predProbDf.insert(loc=0, column='SMILES', value=smiles)
     predProbDfSort = predProbDf.sort_values(by=1, ascending=False)
     top100Mols = predProbDfSort.head(100)
-
-
     return top100Mols
 
