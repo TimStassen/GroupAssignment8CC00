@@ -48,7 +48,8 @@ The main components of the repository are as follows:
 - Giel Dobbelsteen
 - Tristan Muir
 - Tim Stassen
-
+- Sjoerd de Ruijter
+- 
 
 
 
