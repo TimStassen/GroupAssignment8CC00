@@ -34,7 +34,7 @@ The main components of the repository are as follows:
 
 - `src/`: This folder contains Python scripts for various stages of the project.
 
-- `results/`: This folder holds the final results, including the list of top 100 predicted inhibitors.
+- `predictions/`: This folder holds the final results, including the list of top 100 predicted inhibitors.
 
 - `models/`: This folder contains the models that were trained using different types of data.
 
